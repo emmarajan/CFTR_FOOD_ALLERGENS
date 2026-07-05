@@ -1,0 +1,2081 @@
+---
+title: "Code assembly to the manuscript titled Cystic Fibrosis is associated with IgG4-dominated antibody responses to selected food allergens"
+author: 
+  - Marc Emmenegger^[Division of Medical Immunology, University Hospital Basel, marc.emmenegger@usb.ch], 
+date: "2026-07-05"
+output: 
+  html_document:
+    number_sections: TRUE
+    keep_md: yes
+    css: style.css
+    code_folding: "hide"
+documentclass: article
+fontsize: 11pt
+linkcolor: blue
+mainfont: Arial
+toc: true
+toc_float: true
+toc_depth: 6
+mathjax: null
+css: doc.css
+editor_options: 
+  chunk_output_type: console
+---
+
+# GENERAL COMMENT TO THIS RMARKDOWN FILE
+
+This Rmarkdown file contains code written in R utilised for parts of the analyses contained in the manuscript titled "Cystic Fibrosis is associated with IgG4-dominated antibody responses to selected food allergens".
+
+# LIBRARIES
+
+```{r LIBRARIES, message=FALSE}
+
+# Core tidyverse & data manipulation
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(magrittr)
+library(stringr)
+library(stringi)
+library(forcats)
+library(janitor)
+library(broom)
+library(lubridate)
+
+# Data import/export
+library(openxlsx)
+
+# Visualization
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+library(ggridges)
+library(ggh4x)
+library(gplots)
+library(RColorBrewer)
+library(corrplot)
+library(viridis)
+library(ggsci)
+library(hrbrthemes)
+library(heatmaply)
+library(plotrix)
+library(table1)
+library(DT)
+library(knitr)
+
+# Clustering, dimension reduction & multivariate analysis
+library(cluster)
+library(factoextra)
+library(FactoMineR)
+library(umap)
+library(Rtsne)
+library(bigmds)
+library(parallelDist)
+library(vegan)
+library(dendextend)
+library(ggdendro)
+library(Boruta)
+library(circlize)
+
+# Statistics & modeling
+library(MASS)
+library(mgcv)
+library(lme4)
+library(rstanarm)
+library(drc)
+library(psych)
+library(Hmisc)
+library(MESS)
+library(splines)
+library(PupillometryR)
+library(fmsb)
+library(gapminder)
+library(Lahman)
+
+# Base R
+require(graphics)
+
+# Global options
+options(mc.cores = parallel::detectCores())
+theme_set(theme_bw())
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 1 AND S1
+
+```{r ANALYSES PERTAINING TO FIGURE 1 AND S1, message=FALSE}
+
+################################################################################
+# Fig. 1C
+################################################################################
+
+ggplot(data=departments_data_count_df, aes(x=reorder(Var1, -Freq), y=Freq, fill=reorder(Var1, -Freq))) +
+  geom_bar(stat="identity") +
+  labs(y="Number of occurrences", x='Departments') +
+  coord_flip()
+
+################################################################################
+# Fig. 1D
+################################################################################
+
+qplot(numbers_df$numbers, geom="histogram", ylab = 'Distinct ICD-10 codes', xlab = 'Number of samples per ICD-10 code', binwidth = 10)
+
+################################################################################
+# Fig. 1E
+################################################################################
+
+plot(Arah2_histo$pEC50)
+
+################################################################################
+# Fig. S1B
+################################################################################
+
+ggqqplot(data$posterior)
+
+ggplot(Arah2_histo, aes(x = pEC50)) + 
+  geom_histogram(aes(y =..density..),
+                 breaks = seq(0, 4, by = 0.1), 
+                 colour = "black", 
+                 fill = "pink") +
+                 stat_function(fun = dnorm, args = list(mean = mean(Arah2_histo$pEC50), sd = sd(Arah2_histo$pEC50)))
+
+################################################################################
+# Fig. S1C
+################################################################################
+
+#### Ara h 2 and PrP
+
+ggplot(overlap_data, aes(x=Arah2, y=PrP)) +
+  geom_point()
+
+#### Ara h 2 and CGRP
+
+ggplot(overlap_data, aes(x=Arah2, y=CGRP)) +
+  geom_point()
+
+#### Distributions
+
+ggplot(overlap_data_joy_Arah2, aes(x = pEC50, y = Label, fill = Label)) +
+  geom_density_ridges(
+    aes(point_color = Label, point_fill = Label, point_shape = Class_hits, point_size = Size),
+    alpha = .2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) +
+  ggtitle('Ridge plot with shape and size different for hits for Ara h 2 - data from Ara h 2') +
+  xlab('p(EC50)') +
+  ylab('Antigen') +
+  scale_x_continuous(limits = c(0, 4))
+  
+ggplot(overlap_data_joy_PrP, aes(x = pEC50, y = Label, fill = Label)) +
+  geom_density_ridges(
+    aes(point_color = Label, point_fill = Label, point_shape = Class_hits, point_size = Size),
+    alpha = .2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) +
+  ggtitle('Ridge plot with shape and size different for hits for Ara h 2 - data from PrP') +
+  xlab('p(EC50)') +
+  ylab('Antigen') +
+  scale_x_continuous(limits = c(0, 4))
+
+ggplot(overlap_data_joy_CGRP, aes(x = pEC50, y = Label, fill = Label)) +
+  geom_density_ridges(
+    aes(point_color = Label, point_fill = Label, point_shape = Class_hits, point_size = Size),
+    alpha = .2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) +
+  ggtitle('Ridge plot with shape and size different for hits for Ara h 2 - data from CGRP') +
+  xlab('p(EC50)') +
+  ylab('Antigen') +
+  scale_x_continuous(limits = c(0, 4))
+
+################################################################################
+# Fig. S1D
+################################################################################
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+scatter_data <- as.data.frame(data[,2:3])
+
+scatter_data_lm1 <- scatter_data$First ~ scatter_data$Second
+
+ggplot(scatter_data, aes(x=Second, y=First)) +
+  geom_point(size=2, shape=1, color = 'black') +
+  geom_smooth(method="lm", se=TRUE, fullrange=FALSE, level=0.95, color='darkred', fill='blue') +
+  coord_cartesian(ylim = c(0, 4), xlim = c(0,4)) 
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 2
+
+```{r ANALYSES PERTAINING TO FIGURE 2, message=FALSE}
+
+################################################################################
+# Figs. 2A and 2B
+################################################################################
+
+ggplot(data_sex, aes(fill=Sex, y=Number_percent, x=Condition)) + 
+  geom_bar(position="stack", stat="identity")
+
+ggplot(data_age_points, aes(fill=Sex, y=Age, x=Condition)) + 
+  geom_boxplot()+
+  geom_dotplot(position="dodge", stat="identity", binaxis='y', stackdir = 'center', dotsize = 0.1, binwidth = 1)
+
+################################################################################
+# Fig. 2C
+################################################################################
+
+ggplot(data=df_all_vs_seropositives_dep_aligned, aes(x=reorder(Var1, -Freq_condition), y=Freq_percent, fill=Condition)) +
+  geom_bar(stat="identity", position="identity", alpha = .2) +
+  labs(y="Percent of condition", x='Departments') +
+  scale_fill_manual(values=c("#34baeb", "#9e34eb")) +
+  coord_flip()
+
+################################################################################
+# Figs. 2D and 2E
+################################################################################
+
+#### UMAP for dataset with INCLUSION of male/female sex
+
+groups <- as.factor(data$Class[1:25597])
+label <- unique(groups)
+print(groups)
+print(label)
+
+custom.config = umap.defaults
+custom.config$metric = 'cosine'
+custom.config
+
+set.seed(42)
+umap_04 <- umap::umap(data.matrix(data[c(3:1534, 1536)]), metric = 'cosine')
+
+df_umap_04 <- data.frame(x = umap_04$layout[,1],
+                 y = umap_04$layout[,2],
+                 color = groups)
+
+ggplot(df_umap_04, aes(x, y, color = groups)) +
+  geom_point(size = 2, stroke = 0) +
+  theme_bw() + 
+  ylab("UMAP Dimension 2") + 
+  xlab("UMAP Dimension 1") + 
+  scale_color_manual(values=c("#6A8ED2", "red")) +
+  labs(colour="Hits") +
+  ggtitle('Cosine UMAP of all patients screened: ICD-10 and sex')
+
+#### PCA for dataset with INCLUSION of male/female sex
+
+mat_data <- data.matrix(data[c(3:1534, 1536)])
+print(mat_data)
+rownames(mat_data) <- rnames          
+print(rownames(mat_data))
+
+groups <- as.factor(data$Class[1:25597])
+print(groups)
+
+set.seed(42)
+mat_data.pca <- prcomp(mat_data, center = TRUE)
+print(mat_data.pca)
+
+fviz_eig(mat_data.pca)
+
+summary(mat_data.pca)
+
+fviz_pca_ind(mat_data.pca,
+             col.ind = groups,
+             palette = c("#6A8ED2",  "red"), 
+             addEllipses = FALSE,
+             legend.title = "Hits", 
+             repel = TRUE, 
+             geom.ind = c("point"),
+             title = 'PCA of all patients screened: ICD-10 and sex'
+)
+
+################################################################################
+# Fig. 2G
+################################################################################
+
+logit = function(x) log(x/(1-x))
+inv.logit = function(x) exp(x)/(1+exp(x))
+qsum = function(x) c(quantile(x,probs=c(0.5,0.025,0.975)))
+
+# The approach is simple: 
+# (1) We use logit transformed EC50 values. 
+# (2) We conduct a gaussian regression. 
+# (3) We exponentiate the resulting to obtain the OR.
+# Compared to standard logistic regression, we carry out the logit-transform beforehand and do not
+# run a binomial regression model with logit link.
+# Instead, we run a Gaussian regression on logit-transformed data.
+
+#### 1.
+
+rnames <- data[,1]
+print(rnames)
+
+#### 2.
+
+# We (1) exponentiate the pEC50 to get the EC50 and then (2) negatively logit transform the EC50 values.
+# The highest p(EC50) values therefore correspond to the highest -logit(EC50) values.
+
+icd10_logit =  data %>%
+  dplyr::mutate(age=(age-mean(age))/sd(age)) %>%
+  dplyr::mutate(posterior=10^(-posterior)) %>%
+  dplyr::mutate(posterior=ifelse(posterior==0,0+0.0260638,posterior)) %>%
+  dplyr::mutate(posterior=ifelse(posterior==1,1-0.0260638,posterior)) %>% #We scale between 0-1, so that we reach the value of the highest sample that is not 1
+  dplyr::mutate(posterior=-logit(posterior)) %>%
+  dplyr::select(-patient_id) 
+
+#### 3.
+
+# normal prior
+m1_lin = stan_glm(posterior~.,
+                  family=gaussian(),
+                  prior=normal(0,10),
+                  prior_intercept = normal(0,10),
+                  data=icd10_logit)
+summary(m1_lin)
+s1_lin = summary(m1_lin,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="Uninformative prior") %>%
+  arrange(-abs(`50%`))
+
+
+# lasso prior with 1 df
+m1_lasso = stan_glm(posterior~.,
+                    family=gaussian(),
+                    prior=lasso(df=1),
+                    data=icd10_logit)
+summary(m1_lasso)
+s1_lasso = summary(m1_lasso,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="LASSO") %>%
+  arrange(-abs(`50%`))
+
+# horseshoe prior (Piironen and Vehtari (2017))  
+globalscale = (19/570)/sqrt(589)
+
+m1_hs = stan_glm(posterior~.,
+                 family=gaussian(),
+                 prior=hs(global_scale=globalscale),
+                 data=icd10_logit)
+summary(m1_hs)
+s1_hs = summary(m1_hs,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="Regularized horseshoe") %>%
+  arrange(-abs(`50%`))
+
+post_icd10 = bind_rows(s1_lasso,s1_hs,s1_lin) %>%
+  mutate(rowname=factor(rowname,levels=s1_hs$rowname[order(s1_hs$`50%`)]),
+         type=factor(type,levels=c("Uninformative prior","LASSO","Regularized horseshoe")))
+saveRDS(post_icd10,file="post_icd10.rds")
+
+#### 4.
+
+post_icd10 = readRDS("post_icd10.rds")
+ranks = filter(post_icd10,type=="Regularized horseshoe") %>%
+  arrange(-`50%`) %>%
+  mutate(rank=row_number()) %>%
+  mutate(ICD10=rowname) %>%
+  dplyr::select(ICD10,rank)
+
+tibble_post_icd10 <- post_icd10 %>%
+  mutate(OR=paste0(sprintf("%.2f",OR)," (",sprintf("%.2f",OR_low),"-",sprintf("%.2f",OR_high),")")) %>%
+  dplyr::select(ICD10=rowname,OR,type) %>%
+  pivot_wider(names_from=type,values_from=OR) %>%
+  left_join(ranks) %>%
+  arrange(rank) %>% 
+  filter(rank %in% c(1:10,(max(rank)-9):max(rank))) %>%
+  dplyr::select(rank,ICD10,`Uninformative prior`,LASSO,`Regularized horseshoe`)
+write.csv(tibble_post_icd10,"tibble_post_icd10_ranktable.csv")
+
+post_icd10 %>%
+  mutate(type=factor(type,labels=c("Unregularized","LASSO","Regularized Horseshoe"))) %>%
+  ggplot() +
+  geom_pointrange(aes(x=rowname,y=OR,ymin=OR_low,ymax=OR_high,colour=type)) +
+  geom_hline(yintercept=1,linetype=2) +
+  scale_colour_discrete(guide='none') +
+  scale_y_log10() +
+  coord_flip() +
+  facet_wrap(~type,ncol=3) +
+  theme(axis.text.y = element_text(size = 1)) +
+  labs(y="Odds ratio (95% credible interval)",x="ICD 10 code, sex, or age",title="Association between ICD-10 codes and pEC50 values against nAra h 2.")
+
+write.csv(post_icd10,"post_icd10_ranktable.csv")
+
+post_icd10_top10 %>%
+  mutate(type) %>%
+  ggplot() +
+  geom_pointrange(aes(reorder(x=rowname, -rank),y=OR,ymin=OR_low,ymax=OR_high,colour=type)) +
+  geom_hline(yintercept=1,linetype=2) +
+  scale_colour_discrete(guide='none') +
+  scale_y_log10() +
+  coord_flip() +
+  facet_wrap(~type,ncol=3) +
+  theme(axis.text.y = element_text(size = 10)) +
+  labs(y="Odds ratio (95% credible interval)",x="ICD-10 code, sex, or age",title="Association between ICD-10 codes and -logit(EC50) values against nAra h 2.")
+
+################################################################################
+# Fig. 2I
+################################################################################
+
+logit = function(x) log(x/(1-x))
+inv.logit = function(x) exp(x)/(1+exp(x))
+qsum = function(x) c(quantile(x,probs=c(0.5,0.025,0.975)))
+
+medication_logit =  data %>%
+  dplyr::mutate(age=(age-mean(age))/sd(age)) %>%
+  dplyr::mutate(posterior=10^(-posterior)) %>%
+  dplyr::mutate(posterior=ifelse(posterior==0,0+0.0260638,posterior)) %>%
+  dplyr::mutate(posterior=ifelse(posterior==1,1-0.0260638,posterior)) %>% #We scale between 0-1, so that we reach the value of the highest sample that is not 1
+  dplyr::mutate(posterior=-logit(posterior)) %>%
+  dplyr::select(-patient_id) 
+
+qplot(medication_logit$posterior, geom="histogram", ylab = 'Number of occurrences', xlab = '-logit(EC50)', binwidth = 0.05)
+ggqqplot(medication_logit$posterior) #We observe some very negative values that result from the -logit transform... 
+
+# normal prior
+m1_lin = stan_glm(posterior~.,
+                  family=gaussian(),
+                  prior=normal(0,10),
+                  prior_intercept = normal(0,10),
+                  data=medication_logit)
+summary(m1_lin)
+s1_lin = summary(m1_lin,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="Uninformative prior") %>%
+  arrange(-abs(`50%`))
+
+# lasso prior with 1 df
+m1_lasso = stan_glm(posterior~.,
+                    family=gaussian(),
+                    prior=lasso(df=1),
+                    data=medication_logit)
+summary(m1_lasso)
+s1_lasso = summary(m1_lasso,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="LASSO") %>%
+  arrange(-abs(`50%`))
+
+# horseshoe prior
+
+globalscale = (14/320)/sqrt(334)
+
+m1_hs = stan_glm(posterior~.,
+                 family=gaussian(),
+                 prior=hs(global_scale=globalscale),
+                 data=medication_logit)
+
+summary(m1_hs)
+s1_hs = summary(m1_hs,probs = c(0.025,.5,0.975)) %>%
+  as.data.frame() %>%
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  filter(!(rowname %in% c("log-posterior","mean_PPD","(Intercept)","sigma"))) %>%
+  mutate(rowname=gsub("TRUE","",rowname),
+         OR=exp(`50%`),
+         OR_low=exp(`2.5%`),
+         OR_high=exp(`97.5%`),
+         type="Regularized horseshoe") %>%
+  arrange(-abs(`50%`))
+
+post_medication = bind_rows(s1_lasso,s1_hs,s1_lin) %>%
+  mutate(rowname=factor(rowname,levels=s1_hs$rowname[order(s1_hs$`50%`)]),
+         type=factor(type,levels=c("Uninformative prior","LASSO","Regularized horseshoe")))
+saveRDS(post_medication,file="post_medication.rds")
+
+post_medication = readRDS("post_medication.rds")
+ranks = filter(post_medication,type=="Regularized horseshoe") %>%
+  arrange(-`50%`) %>%
+  mutate(rank=row_number()) %>%
+  mutate(medication=rowname) %>%
+  dplyr::select(medication,rank)
+
+tibble_post_medication <- post_medication %>%
+  mutate(OR=paste0(sprintf("%.2f",OR)," (",sprintf("%.2f",OR_low),"-",sprintf("%.2f",OR_high),")")) %>%
+  dplyr::select(medication=rowname,OR,type) %>%
+  pivot_wider(names_from=type,values_from=OR) %>%
+  left_join(ranks) %>%
+  arrange(rank) %>% 
+  filter(rank %in% c(1:10,(max(rank)-9):max(rank))) %>%
+  dplyr::select(rank,medication,`Uninformative prior`,LASSO,`Regularized horseshoe`)
+write.csv(tibble_post_medication,"tibble_post_medication_ranktable.csv")
+
+post_medication %>%
+  mutate(type=factor(type,labels=c("Unregularized","LASSO","Regularized Horseshoe"))) %>%
+  ggplot() +
+  geom_pointrange(aes(x=rowname,y=OR,ymin=OR_low,ymax=OR_high,colour=type)) +
+  geom_hline(yintercept=1,linetype=2) +
+  scale_colour_discrete(guide='none') +
+  scale_y_log10() +
+  coord_flip() +
+  facet_wrap(~type,ncol=3) +
+  theme(axis.text.y = element_text(size = 1)) +
+  labs(y="Odds ratio (95% credible interval)",x="Medication, sex, or age",title="Association between medication and -logit(EC50) values against nAra h 2.")
+
+write.csv(post_medication,"post_medication_ranktable.csv")
+
+post_medication_top10 %>%
+  mutate(type) %>%
+  ggplot() +
+  geom_pointrange(aes(reorder(x=rowname, -rank),y=OR,ymin=OR_low,ymax=OR_high,colour=type)) +
+  geom_hline(yintercept=1,linetype=2) +
+  scale_colour_discrete(guide='none') +
+  scale_y_log10() +
+  coord_flip() +
+  facet_wrap(~type,ncol=3) +
+  theme(axis.text.y = element_text(size = 10)) +
+  labs(y="Odds ratio (95% credible interval)",x="Medication, sex, or age",title="Association between medication and -logit(EC50) values against nAra h 2.")
+
+################################################################################
+# Figs. 2F and 2H
+################################################################################
+
+ggplot(data=df_ICD10, aes(x=reorder(Var1, -Comment), y=Freq_percent, fill=Condition)) +
+  geom_bar(stat="identity", position="identity", alpha = .2) +
+  labs(y="Percent of condition", x='ICD-10 codes') +
+  scale_fill_manual(values=c("#9e34eb", "#34baeb")) +
+  coord_flip()
+
+ggplot(data=df_medication, aes(x=reorder(Var1, -Comment), y=Freq_percent, fill=Condition)) +
+  geom_bar(stat="identity", position="identity", alpha = .2) +
+  labs(y="Percent of condition", x='Medications') +
+  scale_fill_manual(values=c("#9e34eb", "#34baeb")) +
+  coord_flip()
+
+################################################################################
+# Figs. 2J and 2K
+################################################################################
+
+#### UMAP all ICD-10 with sex, binary (cosine) metric
+
+rnames_hits <- data_hits[,2]
+print(rnames_hits)
+
+groups <- as.factor(data_hits$HasCF[1:102])
+label <- unique(groups)
+print(groups)
+print(label)
+
+custom.config = umap.defaults
+custom.config$metric = 'cosine'
+custom.config
+
+set.seed(42)
+umap_08 <- umap::umap(data.matrix(data_hits[c(4:7387)]), metric = 'cosine')
+
+df_umap_08 <- data.frame(x = umap_08$layout[,1],
+                         y = umap_08$layout[,2],
+                         color = groups)
+
+ggplot(df_umap_08, aes(x, y, color = groups)) +
+  geom_point(size = 2, stroke = 0) +
+  theme_bw() + 
+  ylab("UMAP Dimension 2") + 
+  xlab("UMAP Dimension 1") + 
+  scale_color_manual(values=c("#6A8ED2", "red")) +
+  labs(colour="Has CF") +
+  ggtitle('Cosine UMAP of hits: ICD-10, medication and sex')
+
+#### PCA all ICD-10 with sex
+
+mat_data_hits <- data.matrix(data_hits[c(4:7387)])
+print(mat_data_hits)
+rownames(mat_data_hits) <- rnames_hits          
+print(rownames(mat_data_hits))
+
+groups <- as.factor(data_hits$HasCF[1:102])
+print(groups)
+
+set.seed(42)
+mat_data_hits.pca <- prcomp(mat_data_hits, center = TRUE)
+print(mat_data_hits.pca)
+
+fviz_eig(mat_data_hits.pca)
+
+summary(mat_data_hits.pca)
+
+fviz_pca_biplot(
+  mat_data_hits.pca,
+  axes = c(1, 2),
+  geom.var = c("point", "text"),
+  col.var = "grey",
+  col.ind = groups,
+  palette = c("#6A8ED2", "red"),
+  label = "all",
+  invisible = "none",
+  repel = TRUE,
+  habillage = "none",
+  addEllipses = FALSE,
+  title = "PCA of hits: ICD-10, medication and sex - show features",
+  legend.title = "Has CF"
+)
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 3
+
+```{r ANALYSES PERTAINING TO FIGURE 3, message=FALSE}
+
+################################################################################
+# Fig. 3A
+################################################################################
+
+mat_data_CF <- data.matrix(data_CF[c(3:1534, 1536)])
+print(mat_data_CF)
+rownames(mat_data_CF) <- rnames_CF          
+print(rownames(mat_data_CF))
+
+res.hc_binary_CF <- mat_data_CF %>%
+  dist(method = "binary") %>%
+  hclust(method = "ward.D2")  
+
+fviz_dend(res.hc_binary_CF, k = 3,
+          cex = 0.5,
+          k_colors = c("#2E9FDF", "#FC4E07", "#E7B800"),
+          color_labels_by_k = TRUE,
+          rect = TRUE,
+          label_cols = groups,
+          show_labels = TRUE)
+
+################################################################################
+# Figs. 3B and 3C
+################################################################################
+
+#### PCA for dataset with INCLUSION of male/female sex
+
+groups <- as.factor(data_CF$Class[1:169])
+print(groups)
+
+set.seed(42)
+mat_data_CF.pca <- prcomp(mat_data_CF, center = TRUE)
+print(mat_data_CF.pca)
+
+fviz_eig(mat_data_CF.pca)
+
+summary(mat_data_CF.pca)
+
+fviz_pca_ind(mat_data_CF.pca,
+             col.ind = groups, # color by groups
+             palette = c("#6A8ED2",  "red"), 
+             addEllipses = FALSE, # Concentration ellipses,
+             #ellipse.type = "concentrated"
+             legend.title = "Hits", 
+             repel = TRUE, 
+             geom.ind = c("point"),
+             #geom = "points"
+             title = 'PCA of CF patients: ICD-10 and sex')
+
+#### UMAP for dataset with INCLUSION of male/female sex
+
+groups <- as.factor(data_CF$Class[1:169])
+label <- unique(groups)
+print(groups)
+print(label)
+
+custom.config = umap.defaults
+custom.config$metric = 'cosine'
+custom.config
+
+umap_06 <- umap::umap(data.matrix(data_CF[c(3:1534, 1536)]), metric = 'cosine')
+
+df_umap_06 <- data.frame(x = umap_06$layout[,1],
+                         y = umap_06$layout[,2],
+                         color = groups)
+
+ggplot(df_umap_06, aes(x, y, color = groups)) +
+  geom_point(size = 2, stroke = 0) +
+  theme_bw() + 
+  ylab("UMAP Dimension 2") + 
+  xlab("UMAP Dimension 1") + 
+  scale_color_manual(values=c("#6A8ED2", "red")) +
+  labs(colour="Hits") +
+  ggtitle('Cosine UMAP of CF patients: ICD-10 and sex')
+
+################################################################################
+# Figs. 3D and 3E
+################################################################################
+
+data_sex <- read.csv("df_analysis_sex_age_patients_for_analysis_sex.csv")
+rnames <- data_sex[,1]
+print(rnames)
+
+ggplot(data_sex, aes(fill=Sex, y=Number_percent, x=Condition)) + 
+  geom_bar(position="stack", stat="identity")
+
+data_age_points <- read.csv("df_analysis_sex_age_patients_for_analysis_age_points.csv")
+rnames <- data_age_points[,1]
+print(rnames)
+
+ggplot(data_age_points, aes(fill=Sex, y=Age, x=Condition)) + 
+  geom_boxplot()+
+  geom_dotplot(position="dodge", stat="identity", binaxis='y', stackdir = 'center', dotsize = 0.1, binwidth = 1)
+
+################################################################################
+# Fig. 3F
+################################################################################
+
+Only_CF <- Only_CF %>%
+  dplyr::mutate(PatientIDList = Sample_ID) %>%
+  dplyr::select(-Age,-Sex, -Sample_ID)
+
+Lab_merge <- For_merge_clean %>%
+  left_join(Lab_values, by='pat_research_id') %>%
+  dplyr::select(pat_research_id, PatientIDList, corrEC50, Age, Gender, observed_value:observation_value_code) %>%
+  right_join(Only_CF, by='PatientIDList') %>%
+  dplyr::select(pat_research_id, PatientIDList, corrEC50, Age, Gender, observed_value:observation_value_code, Condition) %>%
+  dplyr::filter(observation_value_code =='186'|
+                observation_value_code =='2281' |
+                observation_value_code =='2278') %>%
+  mutate(Lab_date = as.Date(ymd_hms(observation_date))) %>%
+  mutate(J_date = substring(PatientIDList, 2,6)) %>%
+  mutate(J_date = paste0('201',J_date)) %>%
+  mutate(J_date = as.Date(ymd(J_date))) %>%
+  rename(Unit = observed_value_unit) %>%
+  dplyr::filter(J_date==Lab_date) %>% # We end up with the lab values that correspond with the day of sample processing
+  mutate(across(c(contains('observed_value')), 
+                ~ifelse(str_detect(., "<"), 0, .))) %>%
+  mutate_at(vars(contains('observed_value')),as.numeric)
+
+Lab_merge %>%
+  ggplot(aes(x=Condition, y=observed_value, colour=Condition)) +
+  geom_boxplot(outlier.shape=NA, alpha=0.7, colour='black') +
+  geom_point(position = position_jitterdodge()) +
+  ggh4x::facet_grid2(cols=vars(analysis_description), scales='free', independent = "y", space='free_x') +
+  xlab("") +
+  ylab("Respective value in g/L or mg/l") +
+  scale_colour_manual(values=c('red','blue')) +
+  guides(colour=FALSE) +
+  theme_bw() +
+  theme(strip.text = element_text(size = 12)) +
+  geom_hline(data = References, aes(yintercept = (observed_value)),linetype="dashed", color = "black")
+  
+compare_means(observed_value ~ Condition,  data=Lab_merge, group.by = 'analysis_description',
+              method = "wilcox", symnum.args=signifiance_stars, p.adjust.method = "BH")
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 4
+
+```{r ANALYSES PERTAINING TO FIGURE 4, message=FALSE}
+
+################################################################################
+# Figs. 4A-D
+################################################################################
+
+#### nAra h 2-specific immunoglobulins G and A
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,2:4])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(1.7,4.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,12),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=1.5, cexCol=1.5,
+          cellnote=labels_ige2, notecol="black", notecex=1.0,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+#### peanut extract ImmunoCAP
+
+# Values
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,2:3])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Greens"))(n = 199)
+
+colors = c(seq(0.0,200.0,length=200)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.1, cexCol=0.5,
+          cellnote=labels_ige2, notecol="black", notecex=1.0,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+# classes
+
+my_palette <- colorRampPalette(brewer.pal(9, "Oranges"))(n = 199)
+
+colors = c(seq(0.0,6.0,length=200)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.1, cexCol=0.5,
+          cellnote=labels_ige2, notecol="black", notecex=1.0,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+#### nAra h 2-specific immunoglobulins G subclasses
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,2:5])  
+rownames(x) <- rnames
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(1.7,4.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,12),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=1.5, cexCol=1.5,
+          cellnote=labels_ige2, notecol="black", notecex=1.0,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+#### Total immunoglobulins
+
+data_wide <- data %>%
+  select(Pat_ID, Assay, Result_corr) %>%
+  pivot_wider(names_from = Assay, values_from = Result_corr) %>%
+  mutate(across(-Pat_ID, ~na_if(as.character(.x), "NULL"))) %>%
+  mutate(across(-Pat_ID, as.numeric)) %>%
+  as.data.frame()
+
+x_gam  <- data_wide %>% select(IgG, IgA, IgM) %>% as.matrix()
+x_ige  <- data_wide %>% select(IgE) %>% as.matrix()
+x_ige2 <- cbind(IgE = x_ige, IgE_copy = x_ige, IgE_copy_copy = x_ige)   # triplicate for heatmap.2
+x_iggx <- data_wide %>% select(IgG1, IgG2, IgG3, IgG4) %>% as.matrix()
+
+rownames(x_gam)  <- data_wide$Pat_ID
+rownames(x_ige2) <- data_wide$Pat_ID
+rownames(x_iggx) <- data_wide$Pat_ID
+
+make_labels <- function(mat) {
+  apply(mat, c(1,2), function(v) {
+    if (is.na(v)) {
+      return("NA")
+    } else if (v == 0) {
+      return("nd")
+    } else {
+      return(format(round(v,1), nsmall=1))
+    }
+  })
+}
+
+labels_gam  <- make_labels(x_gam)
+labels_ige2 <- make_labels(x_ige2)
+labels_iggx <- make_labels(x_iggx)
+
+pal_blue <- colorRampPalette(brewer.pal(9, "Blues"))(99)
+pal_grey <- colorRampPalette(brewer.pal(9, "Greys"))(99)
+
+# 1) IgG, IgA, IgM (0–20 g/L)
+heatmap.2(x_gam,
+          Rowv=FALSE, Colv="NA", dendrogram="none",
+          margin=c(8,12),
+          col=pal_blue,
+          symm=FALSE, symkey=FALSE, symbreaks=TRUE, scale="none",
+          breaks=seq(0, 20, length=100),
+          sepwidth=c(0.01,0.01), sepcolor="white", colsep=1:ncol(x_gam),
+          labCol=NULL,
+          cexRow=1.2, cexCol=1.5,
+          key=TRUE, keysize=1.5, trace="none", density.info="none",
+          main="IgG, IgA, IgM (0–20 g/L)",
+          cellnote=labels_gam, notecol="black", notecex=1.0)
+
+# 2) IgE (0–100 IU/L)
+heatmap.2(x_ige2,
+          Rowv=FALSE, Colv="NA", dendrogram="none",
+          margin=c(8,12),
+          col=pal_grey,
+          symm=FALSE, symkey=FALSE, symbreaks=TRUE, scale="none",
+          breaks=seq(0, 100, length=100),
+          sepwidth=c(0.01,0.01), sepcolor="white", colsep=1:ncol(x_ige2),
+          labCol=NULL,
+          cexRow=1.2, cexCol=1.5,
+          key=TRUE, keysize=1.5, trace="none", density.info="none",
+          main="IgE (0–100 IU/L)",
+          cellnote=labels_ige2, notecol="black", notecex=1.0)
+
+# 3) IgG subclasses (0–20 g/L)
+heatmap.2(x_iggx,
+          Rowv=FALSE, Colv="NA", dendrogram="none",
+          margin=c(8,12),
+          col=pal_blue,
+          symm=FALSE, symkey=FALSE, symbreaks=TRUE, scale="none",
+          breaks=seq(0, 20, length=100),
+          sepwidth=c(0.01,0.01), sepcolor="white", colsep=1:ncol(x_iggx),
+          labCol=NULL,
+          cexRow=1.2, cexCol=1.5,
+          key=TRUE, keysize=1.5, trace="none", density.info="none",
+          main="IgG Subclasses (0–20 g/L)",
+          cellnote=labels_iggx, notecol="black", notecex=1.0)
+
+################################################################################
+# Fig. 4G
+################################################################################
+
+if (!all(c("Group", "ID", "Conc", "CD63") %in% colnames(data))) {
+  stop("Input data must contain: Group, ID, Conc, CD63")
+}
+
+data$Group <- as.factor(data$Group)
+
+summary_data <- data %>%
+  group_by(Group, ID, Conc) %>%
+  summarise(
+    mean_CD63 = mean(CD63, na.rm = TRUE),
+    sd_CD63   = sd(CD63, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+logistic_fits_id <- summary_data %>%
+  group_by(Group, ID) %>%
+  group_map(~ tryCatch(
+    drm(mean_CD63 ~ Conc, data = .x,
+        fct = LL.4(names = c("Slope","Lower","Upper","EC50"),
+                   fixed = c(NA, 0, NA, NA))),
+    error = function(e) NULL
+  ))
+
+id_labels <- summary_data %>% distinct(Group, ID)
+
+pred_id <- map2_dfr(logistic_fits_id, id_labels$ID, function(mod, id) {
+  if (is.null(mod)) return(NULL)
+  newdata <- data.frame(Conc = 10^seq(-4, 1, length.out = 200))
+  preds <- predict(mod, newdata)
+  newdata$fit <- preds
+  newdata$ID <- id
+  return(newdata)
+})
+
+logistic_fits_group <- summary_data %>%
+  group_by(Group) %>%
+  group_map(~ tryCatch(
+    drm(mean_CD63 ~ Conc, data = .x,
+        fct = LL.4(names = c("Slope","Lower","Upper","EC50"),
+                   fixed = c(NA, 0, NA, NA))),
+    error = function(e) NULL
+  ))
+
+group_labels <- summary_data %>% distinct(Group)
+
+pred_group <- map2_dfr(logistic_fits_group, group_labels$Group, function(mod, grp) {
+  if (is.null(mod)) return(NULL)
+  newdata <- data.frame(Conc = 10^seq(-4, 1, length.out = 200))
+  preds <- predict(mod, newdata)
+  newdata$fit <- preds
+  newdata$Group <- grp
+  return(newdata)
+})
+
+combined_model <- drm(CD63 ~ Conc,
+                      curveid = Group,
+                      data = data,
+                      fct = LL.4(
+                        names = c("Slope","Lower","Upper","EC50"),
+                        fixed = c(NA, 0, NA, NA)
+                      ))
+
+ec50_mat <- as.matrix(ED(combined_model, 50, interval = "delta"))
+
+ec50_df <- data.frame(
+  Group = sub("e:(.*):50", "\\1", rownames(ec50_mat)),
+  EC50 = ec50_mat[, "Estimate"],
+  SE = ec50_mat[, "Std. Error"],
+  Lower = ec50_mat[, "Lower"],
+  Upper = ec50_mat[, "Upper"]
+)
+
+ec50_df$Lower[ec50_df$Lower < 0] <- NA
+
+ec50_df$logEC50 <- log(ec50_df$EC50)
+
+wald_test <- function(g1, g2, df) {
+  
+  row1 <- df[df$Group == g1, , drop = FALSE]
+  row2 <- df[df$Group == g2, , drop = FALSE]
+  
+  if (nrow(row1) != 1 | nrow(row2) != 1) {
+    stop(paste("Group not found:", g1, g2))
+  }
+  
+  diff <- log(row1$EC50) - log(row2$EC50)
+  
+  se <- sqrt((row1$SE / row1$EC50)^2 +
+               (row2$SE / row2$EC50)^2)
+  
+  z <- as.numeric(diff / se)
+  p <- 2 * (1 - pnorm(abs(z)))
+  
+  data.frame(
+    Comparison = paste(g1, "vs", g2),
+    log_diff = as.numeric(diff),
+    z_value = z,
+    p_value = p
+  )
+}
+
+test_CF_NC <- wald_test("CF", "NC", ec50_df)
+test_Control_NC <- wald_test("Control", "NC", ec50_df)
+
+ec50_tests <- rbind(test_CF_NC, test_Control_NC)
+
+print(ec50_tests)
+
+groups <- unique(summary_data$Group)
+
+group_colors <- c(
+  "CF" = "#C8559F",
+  "Control" = "#374EA1",
+  "NC" = "grey"
+)
+
+color_map <- c()
+for (g in groups) {
+  ids_in_group <- unique(summary_data$ID[summary_data$Group == g])
+  base_col <- group_colors[g]
+  shades <- colorRampPalette(c("grey90", base_col))(length(ids_in_group)+1)[-1]
+  names(shades) <- ids_in_group
+  color_map <- c(color_map, shades)
+}
+
+p <- ggplot(summary_data, aes(x = Conc, y = mean_CD63, color = ID, group = ID)) +
+  geom_point(alpha = 0.7) +
+  geom_errorbar(aes(ymin = mean_CD63 - sd_CD63, ymax = mean_CD63 + sd_CD63),
+                width = 0.1, alpha = 0.7) +
+  geom_line(data = pred_id, aes(x = Conc, y = fit, color = ID),
+            size = 1, linetype = "dashed", inherit.aes = FALSE) +
+  geom_line(data = pred_group, aes(x = Conc, y = fit, color = Group),
+            size = 1.5, inherit.aes = FALSE) +
+  geom_vline(data = ec50_df,
+             aes(xintercept = EC50, color = Group),
+             linetype = "dotted", size = 1, inherit.aes = FALSE) +
+  geom_text(data = ec50_df,
+            aes(x = EC50, y = max(summary_data$mean_CD63),
+                label = paste0("EC50=", formatC(EC50, format = "g", digits = 2))),
+            angle = 90, vjust = -0.5, hjust = 0, size = 3,
+            inherit.aes = FALSE) +
+  scale_x_log10(
+    breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10),
+    labels = c("0.0001", "0.001", "0.01", "0.1", "1", "10")
+  ) +
+  scale_color_manual(values = c(color_map, group_colors)) +
+  theme_bw(base_size = 14) +
+  labs(
+    x = "Ara-h2 concentration (µg/mL, log scale)",
+    y = "% CD63+ Basophils"
+  )
+
+print(p)
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 5 AND S2
+
+```{r ANALYSES PERTAINING TO FIGURE 5 AND S2, message=FALSE}
+
+################################################################################
+# Fig. 5A
+################################################################################
+
+ggplot(data=df_frequencies_all_groups, aes(reorder(x=Var1, Freq_relevant), y=Freq_percent, fill=Condition)) +
+  geom_bar(stat="identity", position="dodge", alpha = .8) +
+  labs(y="Percent positives within condition", x='Antigen') +
+  scale_fill_manual(values=c("#0D141F", "#464849", "#B1B4B8", "#D0D2D4")) +
+  theme_minimal() +
+  coord_flip()
+
+################################################################################
+# Fig. 5B
+################################################################################
+
+rnames <- data[,3]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,4:41])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(0.0,3.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.1, cexCol=0.5,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+################################################################################
+# Fig. S2A-D
+################################################################################
+
+#### ELISA Heatmap
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,3:16])  # transform column 2-6 into a matrix
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(2.0,3.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          cexRow=0.1, cexCol=0.5,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+#### ELISA PCA
+
+rnames <- data_select[,1]
+print(rnames)
+rownames(data_select) <- rnames
+
+groups <- as.factor(data_select$Cohort_type[1:933])
+print(groups)
+
+mat_data_select <- data.matrix(data_select[,3:16])
+print(mat_data_select)
+rownames(mat_data_select) <- rnames                  
+print(rownames(mat_data_select))
+
+set.seed(42)
+mat_data_select.pca <- prcomp(mat_data_select)
+print(mat_data_select.pca)
+
+print(mat_data_select.pca$x)
+write.csv(mat_data_select.pca$x, 'PCA_prcomp_output.csv')
+
+data_violin <- read.csv("Analyses_output/PCA_prcomp_output_for_density.csv")
+p <- ggplot(data_violin, aes(x=Group, y=PC2, color=Group)) + 
+  geom_violin(trim=FALSE) + 
+  scale_color_manual(values=c("brown","purple","orchid","blue")) +
+  geom_boxplot(width=0.1) +
+  geom_dotplot(binaxis='y', stackdir='center', dotsize=0.1, binwidth = 0.01) + 
+  theme(legend.position="none") + 
+  scale_x_discrete(limits=c("CF", "CF_paediatric", "Random_patients", "Blood_donors")) +
+  ylim(-2, 3)
+
+p
+
+fviz_eig(mat_data_select.pca)
+
+summary(mat_data_select.pca)
+
+fviz_pca_biplot(
+  mat_data_select.pca,
+  axes = c(1, 2),
+  geom.var = c("point", "text"),
+  col.ind = groups,
+  palette = c("red","purple","orchid","blue"), 
+  col.var = "black",
+  label = "var",
+  invisible = "none",
+  repel = TRUE,
+  habillage = "none",
+  addEllipses = TRUE,
+  ellipse.level=0.95,
+  title = "PCA - Biplot",
+  labelsize = 4
+)
+
+#### ELISA HC
+
+dend <- mat_data_select %>% dist %>% hclust %>% as.dendrogram
+dend_info <- mat_data_select %>% dist %>% hclust
+dend_info_outpout <- data.frame(dendextend::cutree(dend_info,2))
+write.csv(dend_info_outpout, 'dend_info_outpout.csv')
+
+dend <- dend %>% 
+  set("labels_colors", as.numeric(groups), order_value = TRUE) %>%
+  set("labels_cex", .25) %>%
+  set("branches_k_color", k=2)
+par(mar = c(4,1,0,8))
+circlize_dendrogram(dend)
+
+#### ISAC Heatmaps
+
+# IgG4 data without cutoff
+
+rnames <- data_IgG4[,3]
+print(rnames)
+rownames(data_IgG4) <- rnames
+
+x <- data.matrix(data_IgG4[,4:22])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(0.0,2.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.1, cexCol=0.5,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+# IgE data without cutoff
+
+rnames <- data_IgE[,3]
+print(rnames)
+rownames(data_IgG4) <- rnames
+
+x <- data.matrix(data_IgE[,4:22])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(0.0,85,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),
+          dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.1, cexCol=0.5,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 6
+
+```{r ANALYSES PERTAINING TO FIGURE 6, message=FALSE}
+
+################################################################################
+# Fig. 6A
+################################################################################
+
+rnames <- data[,1]
+print(rnames)
+rownames(data) <- rnames
+
+x <- data.matrix(data[,2:56])
+rownames(x) <- rnames
+
+my_palette <- colorRampPalette(brewer.pal(9, "Purples"))(n = 99)
+
+colors = c(seq(0.0,10.0,length=100)) 
+
+heatmap.2(x,
+          Rowv=FALSE,
+          Colv="NA",
+          margin=c(8,25),dendrogram=c("none"),
+          col= my_palette,
+          symm=F,symkey=F,symbreaks=T, scale="none",
+          breaks=colors,
+          sepwidth=c(0.01,0.01),
+          sepcolor="white",
+          colsep=1:ncol(x),
+          labCol=NULL,
+          cexRow=0.005, cexCol=0.75,
+          key=TRUE,keysize=1.5,trace="none",density.info=c("none"))
+
+################################################################################
+# Fig. 6B
+################################################################################
+
+rnames <- data_select[,1]
+print(rnames)
+rownames(data_select) <- rnames
+
+mat_data_select <- data.matrix(data_select[,2:56])
+print(mat_data_select)
+rownames(mat_data_select) <- rnames                  
+print(rownames(mat_data_select))
+
+set.seed(42)
+mat_data_select.pca <- prcomp(mat_data_select, center = TRUE)
+print(mat_data_select.pca)
+
+fviz_eig(mat_data_select.pca)
+
+summary(mat_data_select.pca)
+
+fviz_pca_biplot(
+  mat_data_select.pca,
+  axes = c(1, 2),
+  geom.var = c("point", "text"),
+  col.ind = "cos2",
+  fill.ind = "white",
+  col.var = "black",
+  fill.var = "white",
+  gradient.cols = "RdBu",
+  label = "var",
+  invisible = "none",
+  repel = TRUE,
+  habillage = "none",
+  palette = "RdBu",
+  addEllipses = FALSE,
+  title = "PCA - Biplot",
+  labelsize = 1
+)
+
+################################################################################
+# Fig. 6C
+################################################################################
+
+rnames <- data[,1]
+print(rnames)
+
+volcano <- data.frame(data[c(2:3)])
+
+options(ggrepel.max.overlaps = Inf)
+
+ggplot(volcano, aes(x=CF.CTRL, y=(Average_all), label=data$Protein)) +
+  geom_point(size = 2, stroke = 0) +
+  geom_label_repel(aes(label=ifelse(CF.CTRL>1 | CF.CTRL<(-1) & Average_all>1, as.character(data$Protein),''))) +
+  geom_hline(yintercept = 1, 
+             colour="#990000", 
+             linetype="dashed") + 
+  geom_vline(xintercept = 1, 
+             colour="#990000", 
+             linetype="dashed") + 
+  geom_vline(xintercept = -1, 
+             colour="#990000", 
+             linetype="dashed") +
+  theme_bw(base_size = 14) +
+  xlim(-2.8, 2.8) +
+  ylab("Average log2 fold change") + 
+  xlab("Log2 fold change (CF-CTRL)") 
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 7
+
+```{r ANALYSES PERTAINING TO FIGURE 7, message=FALSE}
+
+################################################################################
+# Fig. 7D
+################################################################################
+
+data_HLA_long %>%
+  dplyr::filter(Patient_ID=='USZ-HTA-020' | Patient_ID=='USZ-HTA-014') %>%
+  dplyr::filter(Cytokine =='IL-4' | Cytokine=='TNF-alpha')  %>%
+  dplyr::filter(!(Protein =='Whole peanut extract'| Protein=='Ara H2  whole protein'))  %>%
+  ggplot(aes(x = reorder(Protein,Order), y = Signal, color = Patient_ID, fill=Patient_ID, group=Patient_ID)) +
+  geom_point(position='dodge', size=5) +
+  geom_line() +
+  xlab("") +
+  ylab("Signal") +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  ggh4x::facet_grid2(rows=vars(Cytokine), cols= vars(Sample_type), scales='free', independent = "y") +
+  force_panelsizes(cols = c(0.1, 0.2, 1.1)) +
+  scale_colour_viridis_d() +
+  scale_fill_viridis_d() +
+  theme_bw()
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 8
+
+```{r ANALYSES PERTAINING TO FIGURE 8, message=FALSE}
+
+################################################################################
+# Fig. 8E and 8F
+################################################################################
+
+col <- brewer.pal(n=11, name="RdBu")
+col2 <- c('#C7549F', '#374DA1')
+render.cont <- function(x) { with(stats.default(x), c("", "Mean (SD)" = sprintf("%0.1f (%0.1f)", MEAN, SD), "Median (IQR)" = sprintf("%0.1f (%0.1f to %0.1f)", MEDIAN, Q1, Q3), "Range" = sprintf("%0.0f to %0.0f", MIN, MAX))) }
+render.cont.eq5d <- function(x) { with(stats.default(x), c("", "Mean (SD)" = sprintf("%0.2f (%0.2f)", MEAN, SD), "Median (IQR)" = sprintf("%0.2f (%0.2f to %0.2f)", MEDIAN, Q1, Q3), "Range" = sprintf("%0.2f to %0.2f", MIN, MAX))) }
+render.cat <- function(x) { c("", sapply(stats.default(x), function(y) with(y, sprintf("%d (%0.1f%%)", FREQ, PCTnoNA)))) }
+
+data$Year <- as.numeric(data$Year)
+data$DOB <- as.numeric(data$DOB)
+
+data$Sex <- recode_factor(data$Sex, "1" = "female", "2" = "male", "3" = "neither female nor male")
+data$Sex <- as.factor(data$Sex)
+
+data = data %>% 
+  mutate(bmi = Weight/(Height/100)^2)
+
+data$Age <- as.numeric(data$Year-data$DOB)
+data$Smoking <- recode_factor(data$Smoking, "1" = "Yes, daily", "2" = "Yes, sometimes", "3" = "Ex-smoker", "4" = "Non-smoker")
+data$Alcohol <- recode_factor(data$Alcohol, "1" = "Never", "2" = "Once per month or less", "3" = "2-3 times per month", "4" = "2-3 times per week", "5" = "4 times or more per week")
+data$CFTR_genotype <- recode_factor(data$CFTR_genotype, "1" = "Wildtyp", "2" = "Mutationstraeger", "3" = "Mukoviszidose")
+data$Which_mut_if_carrier <- recode_factor(data$Which_mut_if_carrier, 
+                                           "0" = "Ich weiss nicht genau, aber ich bin Mutationstraeger",
+                                           "1" = "Ich weiss nicht genau, aber mein Kind hat Mukoviszidose", 
+                                           "2" = "F508del", 
+                                           "3" = "G542X",
+                                           "4" = "G551D", 
+                                           "5" = "N1303K", 
+                                           "6" = "R117H",
+                                           "7" = "W1282X", 
+                                           "8" = "R553X", 
+                                           "9" = "621+1G->T",
+                                           "10" = "1717-1G->A", 
+                                           "11" = "3849+10kbC->T", 
+                                           "12" = "2789+5G->A",
+                                           "13" = "I507del", 
+                                           "14" = "R1162X", 
+                                           "15" = "G85E",
+                                           "16" = "D1152H", 
+                                           "17" = "2183AA->G", 
+                                           "18" = "3659delC",
+                                           "19" = "R347P", 
+                                           "20" = "5T", 
+                                           "21" = "3120+1G->A",
+                                           "22" = "A455E", 
+                                           "23" = "3272-26A->G",
+                                           "24" = "R334W", 
+                                           "25" = "1898+1G->A",
+                                           "26" = "CFTRdele2, 3", 
+                                           "27" = "R560T", 
+                                           "28" = "L206W",
+                                           "29" = "2184insA", 
+                                           "30" = "394delTT", 
+                                           "31" = "E60X",
+                                           "32" = "Q493X", 
+                                           "33" = "Eine andere, hier nicht genannte")
+
+data$Which_mut_if_CF <- recode_factor(data$Which_mut_if_CF, 
+                                           "0" = "Ich weiss nicht genau. Aber ich habe Mukoviszidose",
+                                           "1" = "Ich habe zwei verschiedene Krankheit verursachende Mutationen", 
+                                           "2" = "F508del", 
+                                           "3" = "G542X",
+                                           "4" = "G551D", 
+                                           "5" = "N1303K", 
+                                           "6" = "R117H",
+                                           "7" = "W1282X", 
+                                           "8" = "R553X", 
+                                           "9" = "621+1G->T",
+                                           "10" = "1717-1G->A", 
+                                           "11" = "3849+10kbC->T", 
+                                           "12" = "2789+5G->A",
+                                           "13" = "I507del", 
+                                           "14" = "R1162X", 
+                                           "15" = "G85E",
+                                           "16" = "D1152H", 
+                                           "17" = "2183AA->G", 
+                                           "18" = "3659delC",
+                                           "19" = "R347P", 
+                                           "20" = "5T", 
+                                           "21" = "3120+1G->A",
+                                           "22" = "A455E", 
+                                           "23" = "3272-26A->G",
+                                           "24" = "R334W", 
+                                           "25" = "1898+1G->A",
+                                           "26" = "CFTRdele2, 3", 
+                                           "27" = "R560T", 
+                                           "28" = "L206W",
+                                           "29" = "2184insA", 
+                                           "30" = "394delTT", 
+                                           "31" = "E60X",
+                                           "32" = "Q493X", 
+                                           "33" = "Eine andere, hier nicht genannte")
+
+data$Allergy <- recode_factor(data$Allergy, "1" = "Yes", "0" = "No")
+data$Cardiac <- recode_factor(data$Cardiac, "1" = "Yes", "0" = "No")
+data$Stroke <- recode_factor(data$Stroke, "1" = "Yes", "0" = "No")
+data$Cancer <- recode_factor(data$Cancer, "1" = "Yes", "0" = "No")
+data$Depression <- recode_factor(data$Depression, "1" = "Yes", "0" = "No")
+data$Diabetes_mel <- recode_factor(data$Diabetes_mel, "1" = "Yes", "0" = "No")
+data$Hypertension <- recode_factor(data$Hypertension, "1" = "Yes", "0" = "No")
+data$Arthritis <- recode_factor(data$Arthritis, "1" = "Yes", "0" = "No")
+data$Osteoporosis <- recode_factor(data$Osteoporosis, "1" = "Yes", "0" = "No")
+data$Asthma_bronchiale <- recode_factor(data$Asthma_bronchiale, "1" = "Yes", "0" = "No")
+data$COPD <- recode_factor(data$COPD, "1" = "Yes", "0" = "No")
+data$Hepatitis <- recode_factor(data$Hepatitis, "1" = "Yes", "0" = "No")
+data$Infl_bowel <- recode_factor(data$Infl_bowel, "1" = "Yes", "0" = "No")
+data$Chronic_kidney <- recode_factor(data$Chronic_kidney, "1" = "Yes", "0" = "No")
+data$Autoimmune <- recode_factor(data$Autoimmune, "1" = "Yes", "0" = "No")
+data$Atopic_dermatitis <- recode_factor(data$Atopic_dermatitis, "1" = "Yes", "0" = "No")
+data$Migraine <- recode_factor(data$Migraine, "1" = "Yes", "0" = "No")
+data$CF <- recode_factor(data$CF, "1" = "Yes", "0" = "No")
+data$HIV <- recode_factor(data$HIV, "1" = "Yes", "0" = "No")
+data$Other_immune <- recode_factor(data$Other_immune, "1" = "Yes", "0" = "No")
+
+data$Pollen <- recode_factor(ifelse(data$Allergy == 'No', 'No', data$Pollen), "1" = "Yes", "0" = "No")
+data$Contact <- recode_factor(ifelse(data$Allergy == 'No', 'No', data$Contact), "1" = "Yes", "0" = "No")
+data$Food <- recode_factor(ifelse(data$Allergy == 'No', 'No', data$Food), "1" = "Yes", "0" = "No")
+data$Other_allergy <- recode_factor(ifelse(data$Allergy == 'No', 'No', data$Other_allergy), "1" = "Yes", "0" = "No")
+
+data$Hasel <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Hasel), "1" = "Yes", "0" = "No")
+data$Erle <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Erle), "1" = "Yes", "0" = "No")
+data$Esche <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Esche), "1" = "Yes", "0" = "No")
+data$Birke <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Birke), "1" = "Yes", "0" = "No")
+data$Hagebuche <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Hagebuche), "1" = "Yes", "0" = "No")
+data$Eiche <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Eiche), "1" = "Yes", "0" = "No")
+data$Graeser <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Graeser), "1" = "Yes", "0" = "No")
+data$Kraeuter <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Kraeuter), "1" = "Yes", "0" = "No")
+data$Other_allerg <- recode_factor(ifelse(data$Pollen == 'No', 'No', data$Other_allerg), "1" = "Yes", "0" = "No")
+
+data$Gluten <- recode_factor(ifelse(data$Food == 'No', 'No', data$Gluten), "1" = "Yes", "0" = "No")
+data$Milch <- recode_factor(ifelse(data$Food == 'No', 'No', data$Milch), "1" = "Yes", "0" = "No")
+data$Eier <- recode_factor(ifelse(data$Food == 'No', 'No', data$Eier), "1" = "Yes", "0" = "No")
+data$Fische <- recode_factor(ifelse(data$Food == 'No', 'No', data$Fische), "1" = "Yes", "0" = "No")
+data$Krebstiere <- recode_factor(ifelse(data$Food == 'No', 'No', data$Krebstiere), "1" = "Yes", "0" = "No")
+data$Soja <- recode_factor(ifelse(data$Food == 'No', 'No', data$Soja), "1" = "Yes", "0" = "No")
+data$Nuesse <- recode_factor(ifelse(data$Food == 'No', 'No', data$Nuesse), "1" = "Yes", "0" = "No")
+data$Erdnuesse <- recode_factor(ifelse(data$Food == 'No', 'No', data$Erdnuesse), "1" = "Yes", "0" = "No")
+data$Sesam <- recode_factor(ifelse(data$Food == 'No', 'No', data$Sesam), "1" = "Yes", "0" = "No")
+data$Sellerie <- recode_factor(ifelse(data$Food == 'No', 'No', data$Sellerie), "1" = "Yes", "0" = "No")
+data$Senf <- recode_factor(ifelse(data$Food == 'No', 'No', data$Senf), "1" = "Yes", "0" = "No")
+data$Lupinen <- recode_factor(ifelse(data$Food == 'No', 'No', data$Lupinen), "1" = "Yes", "0" = "No")
+data$Weichtiere <- recode_factor(ifelse(data$Food == 'No', 'No', data$Weichtiere), "1" = "Yes", "0" = "No")
+data$Other <- recode_factor(ifelse(data$Food == 'No', 'No', data$Other), "1" = "Yes", "0" = "No")
+
+table1(~ Age + Sex | CFTR_genotype,
+       render.continuous = render.cont, render.categorical = render.cat, 
+       data = data)
+
+data %>%
+  filter(!CFTR_genotype=='Wildtyp') %>%
+  pivot_longer(cols = Allergy:Other, names_to = "symptom", values_to = "value") %>% 
+  group_by(CFTR_genotype, symptom, value) %>% 
+  summarise(n = n()) %>% 
+  filter(!is.na(value)) %>% 
+  mutate(ntot = sum(n), freq = n / ntot) %>% 
+  ungroup() %>% 
+  filter(value == "Yes") %>% 
+  mutate(symptom = fct_reorder(symptom, freq)) %>%
+  ggplot(aes(y = symptom, x = freq, fill = fct_rev(CFTR_genotype))) + 
+  geom_bar(stat = "identity", position = position_dodge(preserve = "single")) + 
+  scale_fill_manual(values = col2) + 
+  guides(fill = guide_legend(reverse = TRUE)) + 
+  theme_bw() + 
+  labs(fill = "CFTR_genotype")
+
+data %>%
+  filter(!CFTR_genotype=='Wildtyp') %>%
+  pivot_longer(cols = Which_mut_if_carrier:Which_mut_if_CF, names_to = "symptom", values_to = "value") %>% 
+  group_by(CFTR_genotype, symptom, value) %>% 
+  summarise(n = n()) %>% 
+  filter(!is.na(value)) %>% 
+  mutate(ntot = sum(n), freq = n / ntot) %>% 
+  ungroup() %>% 
+  mutate(value = fct_reorder(value, freq)) %>%
+  ggplot(aes(y = value, x = freq, fill = fct_rev(CFTR_genotype))) + 
+  geom_bar(stat = "identity", position = position_dodge(preserve = "single")) + 
+  scale_fill_manual(values = col2) + 
+  guides(fill = guide_legend(reverse = TRUE)) + 
+  theme_bw() + 
+  labs(fill = "CFTR_genotype")
+
+```
+
+# ANALYSES PERTAINING TO FIGURE 9 AND S7
+
+```{r ANALYSES PERTAINING TO FIGURE 9 AND S7, message=FALSE}
+
+################################################################################
+# Fig. 9B-D AND S7A-D
+################################################################################
+
+#### Body temperature and anaphylaxis
+
+# -------------------------- AUC --------------------------
+
+calc_auc_safe <- function(time, signal) {
+  df <- data.frame(time = time, signal = signal)
+  df <- df[complete.cases(df), ]
+  df <- df %>%
+    group_by(time) %>%
+    summarise(signal = mean(signal), .groups = "drop") %>%
+    arrange(time)
+  if(nrow(df) < 2) return(NA_real_)
+  sum(diff(df$time) * (head(df$signal, -1) + tail(df$signal, -1)) / 2)
+}
+
+auc_ana <- data_ana_long %>%
+  group_by(Mouse_number, Group, Adjuvans, Type) %>%
+  summarise(AUC = calc_auc_safe(Time, Signal), .groups = "drop") %>%
+  filter(!is.na(AUC))
+
+auc_temp <- data_temp_long %>%
+  group_by(Mouse_number, Group, Adjuvans, Type) %>%
+  summarise(AUC = calc_auc_safe(Time, Signal), .groups = "drop") %>%
+  filter(!is.na(AUC))
+
+# Bootstrapped 95% CI function
+boot_ci <- function(x, R = 1000, conf = 0.95) {
+  if(length(x) < 2) return(c(lower = NA, upper = NA))
+  boot_samples <- replicate(R, mean(sample(x, replace = TRUE)))
+  quantile(boot_samples, probs = c((1 - conf)/2, 1 - (1 - conf)/2))
+}
+
+# Prepare AUC summary with CI for plotting
+auc_ana_summary <- auc_ana %>%
+  group_by(Group, Adjuvans, Type) %>%
+  summarise(
+    mean_AUC = mean(AUC),
+    lower = boot_ci(AUC)[1],
+    upper = boot_ci(AUC)[2],
+    .groups = "drop"
+  )
+
+auc_temp_summary <- auc_temp %>%
+  group_by(Group, Adjuvans, Type) %>%
+  summarise(
+    mean_AUC = mean(AUC),
+    lower = boot_ci(AUC)[1],
+    upper = boot_ci(AUC)[2],
+    .groups = "drop"
+  )
+
+# -------------------------- Custom CI function for ribbons --------------------------
+ci_mean <- function(x) {
+  m <- mean(x)
+  se <- sd(x)/sqrt(length(x))
+  data.frame(y = m, ymin = m - 1.96*se, ymax = m + 1.96*se)
+}
+
+# -------------------------- Plots --------------------------
+
+# AUC for anaphylactic score
+ggplot(auc_ana, aes(x = interaction(Group, Adjuvans, Type), y = AUC,
+                    color = interaction(Group, Adjuvans, Type),
+                    fill  = interaction(Group, Adjuvans, Type))) +
+  geom_point(size = 3, position = position_jitter(width = 0.2)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.2, color = 'black') +
+  scale_fill_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  scale_colour_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  theme_bw() +
+  labs(y = "AUC (Anaphylactic score)", x = '')
+
+# Individual curves + mean + CI ribbons for anaphylaxis
+ggplot(data_ana_long, aes(Time, Signal, group = Mouse_number, color = Group)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Group), fun = mean, geom = "line", size = 1.5) +
+  stat_summary(aes(group = Group, fill = Group), fun.data = ci_mean, geom = "ribbon", alpha = 0.2, color = NA) +
+  scale_fill_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  scale_colour_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  theme_bw() +
+  labs(y = "Anaphylactic score", x = "Time (minutes)")
+
+# AUC for temperature
+ggplot(auc_temp, aes(x = interaction(Group, Adjuvans, Type), y = AUC,
+                     color = interaction(Group, Adjuvans, Type),
+                     fill  = interaction(Group, Adjuvans, Type))) +
+  geom_point(size = 3, position = position_jitter(width = 0.2)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.2, color = 'black') +
+  scale_fill_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  scale_colour_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  theme_bw() +
+  labs(y = "AUC (Temperature)", x = '')
+
+# Individual curves + mean + CI ribbons for temperature
+ggplot(data_temp_long, aes(Time, Signal, group = Mouse_number, color = Group)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Group), fun = mean, geom = "line", size = 1.5) +
+  stat_summary(aes(group = Group, fill = Group), fun.data = ci_mean, geom = "ribbon", alpha = 0.2, color = NA) +
+  scale_fill_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  scale_colour_manual(values = c('#0d0887', '#6a00a8', '#b12a90', '#e16462', '#f0f921', 'lightgrey')) +
+  theme_bw() +
+  labs(y = "Body temperature", x = "Time (minutes)")
+
+# -------------------------- Significance testing --------------------------
+
+comparisons <- list(
+  c("CF", "WT"),
+  c("CF gut cr", "WT")
+)
+
+run_wilcox_auc <- function(df, group1, group2) {
+  df %>%
+    summarise(
+      p_value = wilcox.test(
+        AUC[Group == group1],
+        AUC[Group == group2],
+        exact = FALSE
+      )$p.value
+    ) %>%
+    mutate(comparison = paste(group1, "vs", group2))
+}
+
+results_ana <- bind_rows(
+  lapply(comparisons, function(comp)
+    run_wilcox_auc(
+      subset(auc_ana,
+             Type == "Challenge" &
+               Adjuvans == "CT" &
+               Group %in% c("CF", "CF gut cr", "WT")),
+      comp[1], comp[2]
+    )
+  )
+) %>%
+  mutate(p_adj = p.adjust(p_value, method = "holm")) %>%
+  mutate(
+    significance = case_when(
+      p_adj < 0.0001 ~ "****",
+      p_adj < 0.001  ~ "***",
+      p_adj < 0.01   ~ "**",
+      p_adj < 0.05   ~ "*",
+      TRUE           ~ "ns"
+    )
+  )
+
+results_ana
+
+results_temp <- bind_rows(
+  lapply(comparisons, function(comp)
+    run_wilcox_auc(
+      subset(auc_temp,
+             Type == "Challenge" &
+               Adjuvans == "CT" &
+               Group %in% c("CF", "CF gut cr", "WT")),
+      comp[1], comp[2]
+    )
+  )
+) %>%
+  mutate(p_adj = p.adjust(p_value, method = "holm")) %>%
+  mutate(
+    significance = case_when(
+      p_adj < 0.0001 ~ "****",
+      p_adj < 0.001  ~ "***",
+      p_adj < 0.01   ~ "**",
+      p_adj < 0.05   ~ "*",
+      TRUE           ~ "ns"
+    )
+  )
+
+results_temp
+
+#### Cytokines
+
+level_order <- c('Baseline', 'Immunisation', 'Challenge')
+
+level2 <- c('Peanut', 'none')
+
+subset(data_cyto_long,
+       Cytokine %in% c('IL-4','IFN_gamma','IL-10','IL-17A','IL-13')) %>% 
+  ggplot(aes(
+    y = factor(Type, level = level_order),
+    x = Signal,
+    fill = interaction(Group, Adjuvans, factor(Treatment, level = level2)),
+    colour = interaction(Group, Adjuvans, factor(Treatment, level = level2))
+  )) +
+  geom_boxplot(outlier.shape = NA, alpha=0.2, color='black') +
+  geom_point(position = position_jitterdodge(), alpha = 1, size=2) +
+  coord_flip() +
+  scale_fill_manual(values = c('#0d0887', '#6a00a8','#b12a90','#e16462','#fca636','#f0f921','lightgrey'),
+                    name='Group-Adjuvans-Treatment') +
+  scale_colour_manual(values = c('#0d0887', '#6a00a8','#b12a90','#e16462','#fca636','#f0f921','lightgrey'),
+                      name='Group-Adjuvans-Treatment') +
+  ggh4x::facet_grid2(rows = vars(Cytokine),
+                     cols = vars(factor(Type, level = level_order)),
+                     scales = 'free', independent = "y", space = 'free_x', drop = FALSE) +
+  force_panelsizes(cols = c(0.5, 1, 1)) +
+  labs(y = "Before or after challenge", x = 'Plasma cytokine concentration (pg/ml)') +
+  theme_bw()
+
+# We condcut some statistical tests
+
+# Groups to compare
+comparisons <- list(
+  c("CF", "WT"),
+  c("CF gut cr", "WT")
+)
+
+# Focus only on CT adjuvant and Peanut treatment
+data_cyto_focus <- subset(data_cyto_long,
+                          Adjuvans == "CT" & Treatment == "Peanut")
+
+# Function to run Wilcoxon per cytokine and Type
+run_wilcox <- function(df, group1, group2) {
+  df %>%
+    group_by(Type, Cytokine) %>%
+    summarise(
+      p_value = wilcox.test(Signal[Group == group1],
+                            Signal[Group == group2],
+                            exact = FALSE)$p.value,
+      .groups = "drop"
+    ) %>%
+    mutate(
+      comparison = paste(group1, "vs", group2)
+    )
+}
+
+# Run all comparisons
+results <- bind_rows(
+  lapply(comparisons, function(comp) run_wilcox(data_cyto_focus, comp[1], comp[2]))
+)
+
+# Adjust for multiple comparisons (FDR per cytokine)
+results <- results %>%
+  group_by(Cytokine) %>%
+  mutate(p_adj = p.adjust(p_value, method = "fdr")) %>%
+  ungroup() %>%
+  mutate(
+    significance = case_when(
+      p_adj < 0.0001 ~ "****",
+      p_adj < 0.001  ~ "***",
+      p_adj < 0.01   ~ "**",
+      p_adj < 0.05   ~ "*",
+      TRUE           ~ "ns"
+    )
+  )
+
+print(results)
+
+#### ELISA data
+
+# Focused ELISA data, remove 'untreated' week
+data_ELISA_focus <- data_ELISA_long %>%
+  filter(Week != "untreated") %>%
+  mutate(
+    Signal = as.numeric(Signal),
+    Week = factor(Week, levels = c(2, 5, "Challenge")),
+    Immunoglobulin = factor(Immunoglobulin, levels = rev(c("IgG", "IgE"))),  # IgE top, IgG bottom
+    Group = factor(Group, levels = c("WT", "CF", "CF_gut"))
+  )
+
+# Define colors
+colors_vec <- c('#0d0887', '#6a00a8','#b12a90','#e16462','#fca636','#f0f921','lightgrey')
+
+# Function to plot ELISA
+
+plot_ELISA <- function(df, log_transform = FALSE) {
+  
+  # Reorder Group factor
+  df$Group <- factor(df$Group, levels = c("CF", "CF_gut", "WT"))
+  
+  # Optionally log-transform the y-axis
+  y_aes <- if(log_transform) {
+    log10(df$Signal)
+  } else {
+    df$Signal
+  }
+  
+  ggplot(df, aes(
+    y = y_aes,
+    x = Group,
+    fill = Group,
+    colour = Group
+  )) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.2, color='black') +
+    geom_point(position = position_jitterdodge(jitter.width = 0.15), alpha = 0.8, size=2) +
+    scale_fill_manual(values = c('CF'='#0d0887','CF_gut'='#6a00a8','WT'='#b12a90')) +
+    scale_colour_manual(values = c('CF'='#0d0887','CF_gut'='#6a00a8','WT'='#b12a90')) +
+    ggh4x::facet_grid2(
+      rows = vars(Immunoglobulin),
+      cols = vars(Week),
+      space = "free_x",
+      drop = FALSE
+    ) +
+    labs(
+      x = "",
+      y = ifelse(log_transform, "log10(AU/ml)", "Antibody AU/ml")
+    ) +
+    theme_bw()
+}
+
+# Plot
+plot_ELISA(data_ELISA_focus, log_transform = FALSE)   # raw
+plot_ELISA(data_ELISA_focus, log_transform = TRUE)    # log10
+
+################################
+# Step 1: Compute IgE/IgG ratio
+################################
+
+# Pivot wider so IgG and IgE are columns
+data_ELISA_ratio <- data_ELISA_focus %>%
+  pivot_wider(
+    id_cols = c(Adjuvans, Treatment, Week, Group, Mouse_number, Antigen, Experiment_year), 
+    names_from = Immunoglobulin, 
+    values_from = Signal
+  ) %>%
+  mutate(
+    IgG_IgE_ratio = IgG / IgE,
+    log_IgG_IgE_ratio = log10(IgG / IgE)
+  )
+
+head(data_ELISA_ratio)
+
+# Reorder Group factor
+data_ELISA_ratio$Group <- factor(data_ELISA_ratio$Group, levels = c("CF", "CF_gut", "WT"))
+
+################################
+# Step 2: Plot log-ratio
+################################
+
+plot_ELISA_ratio <- function(df, use_log = TRUE) {
+  y_col <- if(use_log) "log_IgG_IgE_ratio" else "IgG_IgE_ratio"
+  
+  ggplot(df, aes(
+    y = .data[[y_col]],
+    x = Group,
+    fill = Group,
+    colour = Group
+  )) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.2, color='black') +
+    geom_point(position = position_jitterdodge(jitter.width = 0.15), alpha = 0.8, size=2) +
+    scale_fill_manual(values = c('CF'='#0d0887','CF_gut'='#6a00a8','WT'='#b12a90')) +
+    scale_colour_manual(values = c('CF'='#0d0887','CF_gut'='#6a00a8','WT'='#b12a90')) +
+    ggh4x::facet_grid2(
+      cols = vars(Week),
+      drop = FALSE
+    ) +
+    labs(
+      x = "",
+      y = ifelse(use_log, "log10(IgG / IgE ratio)", "IgG / IgE ratio")
+    ) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+}
+
+# Plot
+plot_ELISA_ratio(data_ELISA_ratio, use_log = TRUE)   # log-ratio
+plot_ELISA_ratio(data_ELISA_ratio, use_log = FALSE)  # raw ratio
+
+# Groups to compare
+comparisons <- list(
+  c("CF", "WT"),
+  c("CF_gut", "WT")
+)
+
+# Run Wilcoxon for log IgG/IgE ratio per Week
+run_wilcox_ratio <- function(df, group1, group2) {
+  df %>%
+    group_by(Week) %>%
+    summarise(
+      p_value = wilcox.test(log_IgG_IgE_ratio[Group == group1],
+                            log_IgG_IgE_ratio[Group == group2],
+                            exact = FALSE)$p.value,
+      .groups = "drop"
+    ) %>%
+    mutate(
+      comparison = paste(group1, "vs", group2)
+    )
+}
+
+# Run all comparisons
+results_ratio <- bind_rows(
+  lapply(comparisons, function(comp) run_wilcox_ratio(data_ELISA_ratio, comp[1], comp[2]))
+)
+
+# FDR correction per week
+results_ratio <- results_ratio %>%
+  group_by(Week) %>%
+  mutate(p_adj = p.adjust(p_value, method = "fdr")) %>%
+  ungroup() %>%
+  mutate(
+    significance = case_when(
+      p_adj < 0.0001 ~ "****",
+      p_adj < 0.001  ~ "***",
+      p_adj < 0.01   ~ "**",
+      p_adj < 0.05   ~ "*",
+      TRUE           ~ "ns"
+    )
+  )
+
+results_ratio
+
+```

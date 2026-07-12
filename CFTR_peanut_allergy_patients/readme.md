@@ -1,8 +1,8 @@
 Column names:
-CHROM - chromosome
-POS - position
-REF - reference allele
-ALT - alternative allele
+CHROM - chromosome    
+POS - position      
+REF - reference allele      
+ALT - alternative allele      
 AF_inPA - allele frequency in the sample of 90 individuals (1-90)
 Heterozygosity - proportion of heterozygosity in the sample of 90 individuals (1-90)
 ANN[*].EFFECT - effect of the variant

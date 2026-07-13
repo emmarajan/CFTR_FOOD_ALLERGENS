@@ -1,5 +1,5 @@
 ---
-title: "Code assembly to the manuscript titled Cystic Fibrosis is associated with IgG4-dominated antibody responses to selected food allergens"
+title: "Code assembly Cystic Fibrosis food allergens"
 author: 
   - Marc Emmenegger^[Division of Medical Immunology, University Hospital Basel, marc.emmenegger@usb.ch], 
 date: "2026-07-05"
@@ -24,7 +24,7 @@ editor_options:
 
 # GENERAL COMMENT TO THIS RMARKDOWN FILE
 
-This Rmarkdown file contains code written in R utilised for parts of the analyses contained in the manuscript titled "Cystic Fibrosis is associated with IgG4-dominated antibody responses to selected food allergens".
+This Rmarkdown file contains code written in R utilised for parts of the analyses contained in the manuscript.
 
 # LIBRARIES
 

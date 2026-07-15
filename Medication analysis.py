@@ -25,63 +25,14 @@ connection = pyodbc.connect('Trusted_Connection=yes',
 cursor = connection.cursor();
 
 def get_table (target):
-    if target=='Tau-K18':
-        table = 'TAU_data_Temp'  
     if target=='IQR006':
         table = 'IQR006_data_Temp' 
-    if target=='IQR007':
-        table = 'IQR007_data_Temp'
-    if target=='IQR008':
-        table = 'IQR008_data_Temp'
-    if target=='PrP':
-        table = 'PrP_data_Temp' 
-    if target=='pTDP403':
-        table = 'pTDP403_data_Temp'
-    if target=='pTDP409':
-        table = 'pTDP409_data_Temp'
-    if target=='pyroAB':
-        table = 'pyroAB_data_Temp'
-    if target=='ApoE4':
-        table = 'ApoE4_data_Temp'        
-    if target=='ApoE3':
-        table = 'ApoE3_data_Temp'   
-    if target=='hApoE4nd':
-        table = 'hApoE4nd_data_Temp'
-    if target=='VCAM1':
-        table = 'VCAM1_data_Temp' 
-    if target=='Lag3':
-        table = 'Lag3SecondaryScreen'
-    if target=='LN211':
-        table = 'LN211_data_Temp' 
-    if target=='AGTR1':
-        table = 'AGTR1_data_Temp'
-    if target=='TREM2aa19-174':
-        table = 'TREM2aa19_174_data_Temp'
-    if target=='TREM2aa135-174':
-        table = 'TREM2aa135_174_data_Temp'
-    if target=='S100A8':
-        table = 'S100A8_data_Temp'
-    if target=='S100A8-A9':
-        table = 'S100A8-A9_data_Temp'
-    if target=='S100A8-A9':
-        table = 'S100A8A9_data_Temp'
-    if target=='ASC-C-his':
-        table = 'ASC_C_his_data_Temp'
-    if target=='GP96':
-        table = 'GP96_data_Temp'
-    if target=='SV2':
-        table = 'SV2_data_Temp'  
-    if target=='Spike_IgG':
-        table = 'Spike_IgG_data_Temp'
-    if target=='RBD_IgG':
-        table = 'RBD_IgG_data_Temp' 
-    if target=='NC_IgG':
-        table = 'NC_IgG_data_Temp' 
-    # Update table
+    
+  # Update table
     table = '...' + table
     
     return table
-TARGET = 'S100A8-A9'
+TARGET = 'IQR006'
 TABLE = get_table (TARGET) 
 
 MEDICATION_TABLE = "dbo.Medication_indiv"

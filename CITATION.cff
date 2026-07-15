@@ -1,0 +1,16 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Zajac
+    given-names: Natalia
+  - family-names: Chincisan
+    given-names: Andra
+  - family-names: Noé
+    given-names: Falko
+  - family-names: Rehrauer
+    given-names: Hubert
+  - family-names: Emmenegger
+    given-names: Marc
+title: Code repository for CFTR food allergens study
+version: v.1.0.0
+date-released: 2026-07-15

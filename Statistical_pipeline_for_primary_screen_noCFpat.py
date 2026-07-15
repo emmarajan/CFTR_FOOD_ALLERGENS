@@ -81,66 +81,9 @@ Cursor_icds = connection_icds.cursor();
 
 
 def get_table (target):
-    if target=='Tau-K18':
-        table = 'TAU_data_Temp' 
     if target=='IQR006':
         table = 'IQR006_data_Temp' 
-    if target=='IQR007':
-        table = 'IQR007_data_Temp'
-    if target=='IQR008':
-        table = 'IQR008_data_Temp'
-    if target=='PrP':
-        table = 'PrP_data_Temp'  
-    if target=='pTDP403':
-        table = 'pTDP403_data_Temp'
-    if target=='pTDP409':
-        table = 'pTDP409_data_Temp'
-    if target=='pyroAB':
-        table = 'pyroAB_data_Temp'
-    if target=='ApoE4':
-        table = 'ApoE4_data_Temp'        
-    if target=='ApoE3':
-        table = 'ApoE3_data_Temp'   
-    if target=='hApoE4nd':
-        table = 'hApoE4nd_data_Temp'
-    if target=='VCAM1':
-        table = 'VCAM1_data_Temp' 
-    if target=='Lag3':
-        table = 'Lag3SecondaryScreen' 
-    if target=='LN211':
-        table = 'LN211_data_Temp' 
-    if target=='AGTR1':
-        table = 'AGTR1_data_Temp'
-    if target=='TREM2aa19-174':
-        table = 'TREM2aa19_174_data_Temp'
-    if target=='TREM2aa135-174':
-        table = 'TREM2aa135_174_data_Temp'
-    if target=='S100A8':
-        table = 'S100A8_data_Temp'
-    if target=='S100A8-A9':
-        table = 'S100A8-A9_data_Temp'
-    if target=='S100A8-A9':
-        table = 'S100A8A9_data_Temp'
-    if target=='ASC-C-his':
-        table = 'ASC_C_his_data_Temp'
-    if target=='GP96':
-        table = 'GP96_data_Temp'
-    if target=='SV2':
-        table = 'SV2_data_Temp'  
-    if target=='Spike_IgG':
-        table = 'Spike_IgG_data_Temp'
-    if target=='RBD_IgG':
-        table = 'RBD_IgG_data_Temp' 
-    if target=='NC_IgG':
-        table = 'NC_IgG_data_Temp'
-    if target=='TDP-43_dLCD':
-        table = 'TDP_43_dLCD_data_Temp'
-    if target=='TDP-43_full_length':
-        table = 'TDP_43_full_length_data_Temp'
-    if target=='TDP-43_peptide':
-        table = 'TDP_43_peptide_data_Temp'
-        
-        
+         
         # Update table
     table = '...' + table
     return table
@@ -373,7 +316,7 @@ plt.show()
 # #### 4. CI pirate plot or similar for samples
 # Box plot overlapped with a strip plot for defined targets.
 
-# TARGETS = ['PrP', 'pTDP403', 'pTDP409', 'VCAM1', 'ASC-C-his', 'ApoE3', 'ApoE4', 'hApoE4nd', 'TREM2aa135-174', 'TREM2aa19-174', 'S100A8', 'GP96', 'IQR006', 'IQR007', 'IQR008', 'AGTR1']
+# TARGETS = ['IQR006']
 def get_nmlogEC50_data(table, target):
     db_query = "SELECT mlogEC50, hits FROM "+ table 
     df = pd.read_sql(db_query, pyodbc.connect(Connstr_icd)) 
@@ -388,9 +331,7 @@ def process_data_nmlogEC50_targets():
         frames.append (frame)
     df = pd.concat(frames)
     df = df[df['mlogEC50']>=0]
-    df['Target'] = ['LAG3' if (x=='IQR007') else x for x in df['Target']] 
     df['Target'] = ['nAra h 2' if (x=='IQR006') else x for x in df['Target']] 
-    df['Target'] = ['CGRP' if (x=='IQR008') else x for x in df['Target']] 
     return df
 
 def plot_nmlogEC50_targets(df):
@@ -424,9 +365,7 @@ def process_data_nmlogEC50_targets():
         frames.append (frame)
     df = pd.concat(frames)
     df = df[df['mlogEC50']>=0]
-    df['Target'] = ['LAG3' if (x=='IQR007') else x for x in df['Target']] 
     df['Target'] = ['nAra h 2' if (x=='IQR006') else x for x in df['Target']] 
-    df['Target'] = ['CGRP' if (x=='IQR008') else x for x in df['Target']] 
     return df
 df = process_data_nmlogEC50_targets()
 f, ax = plt.subplots(figsize=(3, 11))
@@ -475,9 +414,7 @@ def reactivity_target ():
     df_reactivity = pd.DataFrame ({'Target':TARGETS, 'Reactivity %':reactivity})    
     return df_reactivity
 df_reactivity = reactivity_target ()
-df_reactivity['Target'] = ['LAG3' if (x=='IQR007') else x for x in df_reactivity['Target']] 
 df_reactivity['Target'] = ['nAra h 2' if (x=='IQR006') else x for x in df_reactivity['Target']] 
-df_reactivity['Target'] = ['CGRP' if (x=='IQR008') else x for x in df_reactivity['Target']] 
 df_reactivity
 
 # Data distribution
@@ -516,12 +453,8 @@ get_best_distribution(df['mlogEC50'])
 
 
 def get_target_name ():
-    if TARGET =='IQR007':
-        target_name = 'LAG3'
-    elif TARGET =='IQR006':
+    if TARGET =='IQR006':
         target_name = 'nAra h 2'
-    elif TARGET =='IQR008':
-        target_name = 'CGRP'
     else:
         target_name = TARGET
     return  target_name        
@@ -726,9 +659,7 @@ def median_test_age (targets):
     return df
 
 df = median_test_age (TARGETS)
-df['Target'] = ['Lag3' if (x=='IQR007') else x for x in df['Target']] 
 df['Target'] = ['Arah2' if (x=='IQR006') else x for x in df['Target']] 
-df['Target'] = ['CGRP' if (x=='IQR008') else x for x in df['Target']] 
 
 significance = []
 for pvalue in df['Bonferroni'].tolist():
@@ -796,9 +727,7 @@ p_val_format = [r"{}e{}".format(i, j)  if int(j)!=0 else r"{}".format(i) for i,j
 
 df_gender['Bonferroni'] =  p_val_format
 df_gender['Signif'] = p_adjusted[0]
-df_gender['Target'] = ['Lag3' if (x=='IQR007') else x for x in df_gender['Target']] 
 df_gender['Target'] = ['Arah2' if (x=='IQR006') else x for x in df_gender['Target']] 
-df_gender['Target'] = ['CGRP' if (x=='IQR008') else x for x in df_gender['Target']] 
 df_gender['Perc male hits'] = perc_male_hits_list
 df_gender['Perc female hits'] = perc_female_hits_list
 df_gender['Perc male nonhits'] = perc_male_list

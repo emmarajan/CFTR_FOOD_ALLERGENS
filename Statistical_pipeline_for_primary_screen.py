@@ -356,7 +356,7 @@ def plot_nmlogEC50_targets(df):
 df = process_data_nmlogEC50_targets()
 plot_nmlogEC50_targets(df)
 
-TARGETS = ['FOLR1']
+TARGETS = ['IQR006']
 
 from ptitprince import PtitPrince as pt
 def get_nmlogEC50_data(table, target):
